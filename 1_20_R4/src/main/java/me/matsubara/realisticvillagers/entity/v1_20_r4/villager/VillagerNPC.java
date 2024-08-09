@@ -307,9 +307,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     private static final MethodHandle BEHAVIORS_FIELD = Reflection.getField(GateBehavior.class, ShufflingList.class, "e", true, "behaviors");
     private static final @SuppressWarnings("unchecked") EntityDataAccessor<Boolean> DATA_EFFECT_AMBIENCE_ID =
-            (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getField(LivingEntity.class, EntityDataAccessor.class, "bJ", true, "DATA_EFFECT_AMBIENCE_ID"));
+            (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getField(LivingEntity.class, EntityDataAccessor.class, "bM", true, "DATA_EFFECT_AMBIENCE_ID"));
     private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_STINGER_COUNT_ID =
-            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getField(LivingEntity.class, EntityDataAccessor.class, "bL", true, "DATA_STINGER_COUNT_ID"));
+            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getField(LivingEntity.class, EntityDataAccessor.class, "bO", true, "DATA_STINGER_COUNT_ID"));
 
     public VillagerNPC(EntityType<? extends Villager> type, Level level) {
         this(type, level, VillagerType.PLAINS);
@@ -1740,12 +1740,24 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public boolean canBreedWith(@NotNull VillagerNPC other) {
-        return other.getSex() != null
-                && !other.getSex().equalsIgnoreCase(sex)
+        return (Config.IGNORE_SEX_WHEN_PROCREATING.asBool() || (other.getSex() != null && !other.getSex().equalsIgnoreCase(sex)))
                 && canBreed()
                 && other.canBreed()
-                && (!hasPartner() ? !other.hasPartner() : isPartner(other.getUUID()))
-                && !isFamily(other.getUUID());
+                && canCheatWith(other)
+                && other.canCheatWith(this)
+                && (Config.ALLOW_PROCREATION_BETWEEN_FAMILY_MEMBERS.asBool() || (!isFamily(other.getUUID()) && !other.isFamily(getUUID())));
+    }
+
+    public boolean canCheatWith(VillagerNPC other) {
+        // If this villager is not married, then this villager can "cheat".
+        if (!hasPartner()) return true;
+
+        // If this villager is married but the other villager is its partner, then this villager can "cheat".
+        if (isPartner(other.getUUID())) {
+            return true;
+        }
+
+        return Config.ALLOW_PARTNER_CHEATING.asBool() && (isPartnerVillager || Config.ALLOW_PARTNER_CHEATING_FOR_ALL.asBool());
     }
 
     @Override
